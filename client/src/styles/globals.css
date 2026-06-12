@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-serif text-teal-deep;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-teal text-cream font-semibold px-6 py-3 rounded hover:bg-teal-deep transition-colors duration-150;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-teal-deep font-semibold px-6 py-3 rounded border border-gray-300 hover:border-teal hover:bg-sage transition-colors duration-150;
+  }
+
+  .btn-gold {
+    @apply bg-gold text-teal-deep font-semibold px-6 py-3 rounded hover:bg-gold-dark transition-colors duration-150;
+  }
+
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg p-6;
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2.5 border border-gray-300 rounded bg-cream focus:outline-none focus:border-teal text-sm;
+  }
+
+  .form-label {
+    @apply block text-sm font-semibold text-teal-deep mb-1.5;
+  }
+
+  .badge {
+    @apply inline-block text-xs font-mono font-semibold px-2 py-1 rounded;
+  }
+
+  .badge-fixed {
+    @apply badge bg-sage text-teal-deep;
+  }
+
+  .badge-residuary {
+    @apply badge bg-yellow-100 text-gold-dark;
+  }
+
+  .section-title {
+    @apply text-2xl font-serif font-bold text-teal-deep mb-4;
+  }
+
+  .eyebrow {
+    @apply text-xs font-mono font-semibold uppercase tracking-widest text-gold mb-3;
+  }
+
+  .page-header {
+    @apply py-12 border-b border-gray-200;
+  }
+}
