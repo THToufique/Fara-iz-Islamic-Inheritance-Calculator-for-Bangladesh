@@ -1,7 +1,4 @@
 'use client';
-// app/admin/page.js
-// Admin panel - stats, pending professionals, users, article creation
-// Tested: admin-only access, approve/reject professionals works ✓
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +7,7 @@ import { isAdmin } from '../../lib/auth';
 
 export default function AdminPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState(null);
   const [pending, setPending] = useState([]);
   const [users, setUsers] = useState([]);
@@ -18,7 +16,10 @@ export default function AdminPage() {
   const [articleForm, setArticleForm] = useState({ title: '', excerpt: '', content: '', category: 'inheritance_law', isPublished: false });
   const [articleMsg, setArticleMsg] = useState('');
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
+    if (!mounted) return;
     if (!isAdmin()) { router.push('/'); return; }
     const fetchAll = async () => {
       try {
@@ -34,35 +35,23 @@ export default function AdminPage() {
       finally { setLoading(false); }
     };
     fetchAll();
-  }, [router]);
+  }, [mounted, router]);
 
   const handleApprove = async (id) => {
-    try {
-      await adminAPI.approveProfessional(id);
-      setPending(prev => prev.filter(p => p._id !== id));
-    } catch (e) {
-      alert('Failed to approve: ' + e.message);
-    }
+    try { await adminAPI.approveProfessional(id); setPending(prev => prev.filter(p => p._id !== id)); }
+    catch (e) { alert('Failed: ' + e.message); }
   };
 
   const handleRemovePro = async (id) => {
     if (!confirm('Remove this listing?')) return;
-    try {
-      await adminAPI.removeProfessional(id);
-      setPending(prev => prev.filter(p => p._id !== id));
-    } catch (e) {
-      alert('Failed to remove: ' + e.message);
-    }
+    try { await adminAPI.removeProfessional(id); setPending(prev => prev.filter(p => p._id !== id)); }
+    catch (e) { alert('Failed: ' + e.message); }
   };
 
   const handleDeactivate = async (id) => {
     if (!confirm('Deactivate this user?')) return;
-    try {
-      await adminAPI.deactivateUser(id);
-      setUsers(prev => prev.map(u => u._id === id ? { ...u, isActive: false } : u));
-    } catch (e) {
-      alert('Failed to deactivate: ' + e.message);
-    }
+    try { await adminAPI.deactivateUser(id); setUsers(prev => prev.map(u => u._id === id ? { ...u, isActive: false } : u)); }
+    catch (e) { alert('Failed: ' + e.message); }
   };
 
   const handleCreateArticle = async (e) => {
@@ -76,6 +65,7 @@ export default function AdminPage() {
 
   const tabs = ['stats', 'professionals', 'users', 'articles'];
 
+  if (!mounted) return null;
   if (loading) return <div className="max-w-6xl mx-auto px-6 py-20 text-center text-ink-soft">Loading admin panel...</div>;
 
   return (
@@ -86,21 +76,16 @@ export default function AdminPage() {
           <h1 className="text-4xl font-serif font-bold text-teal-deep">Admin Panel</h1>
         </div>
       </div>
-
       <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Tabs */}
         <div className="flex gap-1 mb-8 bg-sage p-1 rounded-lg w-fit">
           {tabs.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 rounded text-sm font-medium capitalize transition-colors ${
-                activeTab === tab ? 'bg-teal text-cream' : 'text-teal-deep hover:bg-cream'
-              }`}>
+              className={`px-5 py-2 rounded text-sm font-medium capitalize transition-colors ${activeTab === tab ? 'bg-teal text-cream' : 'text-teal-deep hover:bg-cream'}`}>
               {tab}
             </button>
           ))}
         </div>
 
-        {/* Stats */}
         {activeTab === 'stats' && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -117,13 +102,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Pending professionals */}
         {activeTab === 'professionals' && (
           <div>
             <h2 className="text-xl font-serif font-bold text-teal-deep mb-4">Pending Approvals ({pending.length})</h2>
-            {pending.length === 0 ? (
-              <p className="text-ink-soft text-sm">No pending applications.</p>
-            ) : (
+            {pending.length === 0 ? <p className="text-ink-soft text-sm">No pending applications.</p> : (
               <div className="space-y-4">
                 {pending.map(pro => (
                   <div key={pro._id} className="card flex items-center justify-between gap-4">
@@ -134,7 +116,7 @@ export default function AdminPage() {
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => handleApprove(pro._id)} className="btn-primary text-sm py-1.5 px-4">Approve</button>
-                      <button onClick={() => handleRemovePro(pro._id)} className="btn-ghost text-sm py-1.5 px-4 text-red-600 border-red-200 hover:border-red-400">Remove</button>
+                      <button onClick={() => handleRemovePro(pro._id)} className="btn-ghost text-sm py-1.5 px-4 text-red-600 border-red-200">Remove</button>
                     </div>
                   </div>
                 ))}
@@ -143,7 +125,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Users */}
         {activeTab === 'users' && (
           <div>
             <h2 className="text-xl font-serif font-bold text-teal-deep mb-4">Registered Users ({users.length})</h2>
@@ -171,10 +152,7 @@ export default function AdminPage() {
                       </td>
                       <td className="py-3 px-4">
                         {u.isActive && u.role !== 'admin' && (
-                          <button onClick={() => handleDeactivate(u._id)}
-                            className="text-red-500 text-xs font-semibold hover:text-red-700">
-                            Deactivate
-                          </button>
+                          <button onClick={() => handleDeactivate(u._id)} className="text-red-500 text-xs font-semibold hover:text-red-700">Deactivate</button>
                         )}
                       </td>
                     </tr>
@@ -185,27 +163,14 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Create Article */}
         {activeTab === 'articles' && (
           <div className="max-w-2xl">
             <h2 className="text-xl font-serif font-bold text-teal-deep mb-4">Create Article</h2>
             <form onSubmit={handleCreateArticle} className="card space-y-4">
               {articleMsg && <p className={`text-sm ${articleMsg.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>{articleMsg}</p>}
-              <div>
-                <label className="form-label">Title</label>
-                <input type="text" value={articleForm.title} onChange={e => setArticleForm({ ...articleForm, title: e.target.value })}
-                  className="form-input" required />
-              </div>
-              <div>
-                <label className="form-label">Excerpt</label>
-                <input type="text" value={articleForm.excerpt} onChange={e => setArticleForm({ ...articleForm, excerpt: e.target.value })}
-                  className="form-input" maxLength={300} />
-              </div>
-              <div>
-                <label className="form-label">Content</label>
-                <textarea value={articleForm.content} onChange={e => setArticleForm({ ...articleForm, content: e.target.value })}
-                  className="form-input h-48 resize-y" required />
-              </div>
+              <div><label className="form-label">Title</label><input type="text" value={articleForm.title} onChange={e => setArticleForm({ ...articleForm, title: e.target.value })} className="form-input" required /></div>
+              <div><label className="form-label">Excerpt</label><input type="text" value={articleForm.excerpt} onChange={e => setArticleForm({ ...articleForm, excerpt: e.target.value })} className="form-input" maxLength={300} /></div>
+              <div><label className="form-label">Content</label><textarea value={articleForm.content} onChange={e => setArticleForm({ ...articleForm, content: e.target.value })} className="form-input h-48 resize-y" required /></div>
               <div>
                 <label className="form-label">Category</label>
                 <select value={articleForm.category} onChange={e => setArticleForm({ ...articleForm, category: e.target.value })} className="form-input">
@@ -216,8 +181,7 @@ export default function AdminPage() {
                 </select>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={articleForm.isPublished}
-                  onChange={e => setArticleForm({ ...articleForm, isPublished: e.target.checked })} className="accent-teal" />
+                <input type="checkbox" checked={articleForm.isPublished} onChange={e => setArticleForm({ ...articleForm, isPublished: e.target.checked })} className="accent-teal" />
                 <span className="text-sm text-ink">Publish immediately</span>
               </label>
               <button type="submit" className="btn-primary">Create Article</button>

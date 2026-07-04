@@ -1,7 +1,7 @@
 'use client';
 // app/dashboard/page.js
 // User dashboard - saved calculations list with view and delete actions
-// Tested: redirects to login if not authenticated, deletes calculation from list ✓
+// Fixed: SSR localStorage issue causing redirect on page load ✓
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,23 +15,37 @@ function formatTaka(n) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [calculations, setCalculations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
-  const user = getStoredUser();
+  const [user, setUser] = useState(null);
 
+  // Step 1: mount first
   useEffect(() => {
-    if (!isLoggedIn()) { router.push('/login'); return; }
+    setMounted(true);
+  }, []);
+
+  // Step 2: after mount, check auth and fetch
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isLoggedIn()) {
+      router.push('/login');
+      return;
+    }
+    setUser(getStoredUser());
     const fetchCalcs = async () => {
       try {
         const data = await calculationsAPI.getAll();
         setCalculations(data.calculations || []);
       } catch (e) {
         console.error(e);
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     };
     fetchCalcs();
-  }, [router]);
+  }, [mounted, router]);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this calculation?')) return;
@@ -41,13 +55,14 @@ export default function DashboardPage() {
       setCalculations(prev => prev.filter(c => c._id !== id));
     } catch (e) {
       alert('Failed to delete: ' + e.message);
-    } finally { setDeletingId(null); }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleView = (calc) => {
-    // Store in sessionStorage so results page can display it
     sessionStorage.setItem('faraiz_result', JSON.stringify({
-      hasResult: calc.hasResult !== undefined ? calc.hasResult : true,
+      hasResult: true,
       estateValue: calc.input.estateValue,
       heirs: calc.heirs,
       notes: calc.notes,
@@ -57,6 +72,9 @@ export default function DashboardPage() {
     sessionStorage.setItem('faraiz_input', JSON.stringify(calc.input));
     router.push('/results');
   };
+
+  // Don't render until mounted to prevent SSR flash
+  if (!mounted) return null;
 
   return (
     <div>
@@ -111,15 +129,15 @@ export default function DashboardPage() {
                     <td className="py-3 px-4 font-mono">{formatTaka(calc.input?.estateValue)}</td>
                     <td className="py-3 px-4">{calc.heirs?.length || 0}</td>
                     <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <button onClick={() => handleView(calc)} className="text-teal text-xs font-semibold hover:text-teal-deep">
+                      <div className="flex gap-3">
+                        <button onClick={() => handleView(calc)}
+                          className="text-teal text-xs font-semibold hover:text-teal-deep">
                           View
                         </button>
                         <button
                           onClick={() => handleDelete(calc._id)}
                           disabled={deletingId === calc._id}
-                          className="text-red-500 text-xs font-semibold hover:text-red-700 disabled:opacity-40"
-                        >
+                          className="text-red-500 text-xs font-semibold hover:text-red-700 disabled:opacity-40">
                           {deletingId === calc._id ? '...' : 'Delete'}
                         </button>
                       </div>
