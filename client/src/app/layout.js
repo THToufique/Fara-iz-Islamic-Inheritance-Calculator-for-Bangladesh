@@ -9,7 +9,7 @@ import Footer from '../components/layout/Footer';
 export const metadata = {
   title: "Fara'iz — Islamic Inheritance Calculator Bangladesh",
   description:
-    "Calculate Islamic inheritance shares (Fara'iz) for your family estate in Bangladesh. Free, accurate, and based on Qur\'anic rules.",
+    "Calculate Islamic inheritance shares (Fara'iz) for your family estate in Bangladesh. Free, accurate, and based on Qur'anic rules.",
 };
 
 export default function RootLayout({ children }) {
