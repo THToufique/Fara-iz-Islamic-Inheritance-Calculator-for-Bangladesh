@@ -24,10 +24,8 @@ connectDB();
 
 // ─── Global Middleware ─────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? 'https://faraiz.vercel.app'
-    : 'http://localhost:3000',
-  credentials: true,
+  origin: '*',
+  credentials: false,
 }));
 
 app.use(express.json({ limit: '10mb' }));
