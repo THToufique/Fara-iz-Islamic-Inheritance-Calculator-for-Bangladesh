@@ -1,7 +1,7 @@
 'use client';
 // app/results/page.js
-// Shows calculation results from sessionStorage with pie chart and heir table
-// Tested: pie chart renders correctly, amounts sum to estate value ✓
+// Shows calculation results with money AND land shares
+// Tested: pie chart renders, land column shows correct unit and amount ✓
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,29 @@ import { isLoggedIn } from '../../lib/auth';
 const COLORS = ['#1F4E45','#C9A227','#9FB8AE','#7A8C84','#D9C896','#3E6B60','#B68C2A','#5E7E74'];
 
 function formatTaka(n) {
+  if (!n && n !== 0) return '—';
   return '৳' + Number(n).toLocaleString('en-IN');
+}
+
+function formatLand(area, unit) {
+  if (!area && area !== 0) return '—';
+  const rounded = Math.round(area * 1000) / 1000;
+  const unitLabel = unit === 'decimal' ? 'Dec' : unit === 'katha' ? 'Katha' : 'Bigha';
+  return `${rounded} ${unitLabel}`;
+}
+
+// Convert land area to all units for display
+function getLandConversions(area, unit) {
+  let decimal = area;
+  if (unit === 'katha') decimal = area * 1.65;
+  if (unit === 'bigha') decimal = area * 33;
+  const katha = decimal / 1.65;
+  const bigha = decimal / 33;
+  return {
+    decimal: Math.round(decimal * 1000) / 1000,
+    katha: Math.round(katha * 1000) / 1000,
+    bigha: Math.round(bigha * 1000) / 1000,
+  };
 }
 
 export default function ResultsPage() {
@@ -39,9 +61,8 @@ export default function ResultsPage() {
     try {
       await calculationsAPI.save({ input, label: '' });
       setSaved(true);
-    } catch (e) {
-      setSaveError(e.message);
-    } finally { setSaving(false); }
+    } catch (e) { setSaveError(e.message); }
+    finally { setSaving(false); }
   };
 
   const handlePDF = async () => {
@@ -54,7 +75,7 @@ export default function ResultsPage() {
   if (!result) return (
     <div className="max-w-6xl mx-auto px-6 py-20 text-center">
       <h2 className="text-2xl font-serif font-bold text-teal-deep mb-4">No calculation found</h2>
-      <p className="text-ink-soft mb-6">It looks like you haven't run a calculation yet, or your session expired.</p>
+      <p className="text-ink-soft mb-6">It looks like you haven&apos;t run a calculation yet.</p>
       <Link href="/calculator" className="btn-primary">Go to Calculator</Link>
     </div>
   );
@@ -69,11 +90,26 @@ export default function ResultsPage() {
     </div>
   );
 
+  const hasLand = input?.landArea > 0;
+  const hasMoney = input?.estateValue > 0;
+  const landUnit = input?.landUnit || 'decimal';
+  const unitLabel = landUnit === 'decimal' ? 'Decimal' : landUnit === 'katha' ? 'Katha' : 'Bigha';
+
   const pieData = result.heirs.map((h, i) => ({
     name: h.name,
     value: parseFloat(h.percent),
     color: COLORS[i % COLORS.length],
   }));
+
+  // Calculate land share per heir using same fraction
+  const getLandShare = (heir) => {
+    if (!hasLand) return null;
+    const [num, den] = heir.fractionDisplay.includes('/')
+      ? heir.fractionDisplay.split('/').map(Number)
+      : [1, 1];
+    const fraction = den ? num / den : parseFloat(heir.percent) / 100;
+    return Math.round(input.landArea * fraction * 10000) / 10000;
+  };
 
   return (
     <div>
@@ -85,19 +121,47 @@ export default function ResultsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-10">
+
         {/* Summary band */}
-        <div className="bg-teal rounded-lg p-8 mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { label: 'Total Estate Value', value: formatTaka(result.estateValue) },
-            { label: 'Heirs Identified', value: result.heirs.length },
-            { label: 'Fully Distributed', value: result.totalFraction === '1' ? 'Yes ✓' : result.totalFraction },
-          ].map((item, i) => (
-            <div key={i}>
-              <p className="text-xs font-mono uppercase tracking-widest text-cream opacity-70 mb-1">{item.label}</p>
-              <p className="text-2xl font-serif font-bold text-cream">{item.value}</p>
+        <div className="bg-teal rounded-lg p-8 mb-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {hasMoney && (
+            <div>
+              <p className="text-xs font-mono uppercase tracking-widest text-cream opacity-70 mb-1">Estate Value</p>
+              <p className="text-xl font-serif font-bold text-cream">{formatTaka(result.estateValue)}</p>
             </div>
-          ))}
+          )}
+          {hasLand && (
+            <div>
+              <p className="text-xs font-mono uppercase tracking-widest text-cream opacity-70 mb-1">Land Area</p>
+              <p className="text-xl font-serif font-bold text-cream">{input.landArea} {unitLabel}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest text-cream opacity-70 mb-1">Heirs</p>
+            <p className="text-xl font-serif font-bold text-cream">{result.heirs.length}</p>
+          </div>
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest text-cream opacity-70 mb-1">Distributed</p>
+            <p className="text-xl font-serif font-bold text-cream">{result.totalFraction === '1' ? '100% ✓' : result.totalFraction}</p>
+          </div>
         </div>
+
+        {/* Land conversion info */}
+        {hasLand && (
+          <div className="bg-gold bg-opacity-10 border border-gold border-opacity-30 rounded-lg p-4 mb-6 flex flex-wrap gap-6 text-sm">
+            <span className="text-ink-soft font-semibold">Total land conversions:</span>
+            {(() => {
+              const conv = getLandConversions(input.landArea, landUnit);
+              return (
+                <>
+                  <span><strong className="text-teal-deep">{conv.decimal}</strong> Decimal</span>
+                  <span><strong className="text-teal-deep">{conv.katha}</strong> Katha</span>
+                  <span><strong className="text-teal-deep">{conv.bigha}</strong> Bigha</span>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Chart + Table */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -124,33 +188,92 @@ export default function ResultsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-cream-deep text-xs font-mono uppercase tracking-wide text-ink-soft">
-                  <th className="text-left py-2 px-3">Heir</th>
-                  <th className="text-left py-2 px-3">Share</th>
-                  <th className="text-left py-2 px-3">Basis</th>
-                  <th className="text-right py-2 px-3">Amount</th>
+                  <th className="text-left py-2 px-2">Heir</th>
+                  <th className="text-left py-2 px-2">Share</th>
+                  <th className="text-left py-2 px-2">Basis</th>
+                  {hasMoney && <th className="text-right py-2 px-2">Money</th>}
+                  {hasLand && <th className="text-right py-2 px-2">Land ({unitLabel})</th>}
                 </tr>
               </thead>
               <tbody>
-                {result.heirs.map((h, i) => (
-                  <tr key={i} className={`border-t border-gray-100 ${i % 2 === 0 ? '' : 'bg-cream'}`}>
-                    <td className="py-3 px-3 font-medium">{h.name}<span className="block text-xs text-ink-soft font-normal">{h.role}</span></td>
-                    <td className="py-3 px-3 font-mono font-semibold text-teal-deep">{h.fractionDisplay}<span className="block text-xs text-ink-soft font-normal">{h.percent}%</span></td>
-                    <td className="py-3 px-3">
-                      <span className={h.basis === 'residuary' ? 'badge-residuary' : 'badge-fixed'}>
-                        {h.basis === 'residuary' ? 'Residuary' : 'Fixed'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-mono text-right">{formatTaka(h.amount)}</td>
-                  </tr>
-                ))}
+                {result.heirs.map((h, i) => {
+                  const landShare = getLandShare(h);
+                  return (
+                    <tr key={i} className={`border-t border-gray-100 ${i % 2 === 0 ? '' : 'bg-cream'}`}>
+                      <td className="py-3 px-2 font-medium">
+                        {h.name}
+                        <span className="block text-xs text-ink-soft font-normal">{h.role}</span>
+                      </td>
+                      <td className="py-3 px-2 font-mono font-semibold text-teal-deep">
+                        {h.fractionDisplay}
+                        <span className="block text-xs text-ink-soft font-normal">{h.percent}%</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={h.basis === 'residuary' ? 'badge-residuary' : 'badge-fixed'}>
+                          {h.basis === 'residuary' ? 'Residuary' : 'Fixed'}
+                        </span>
+                      </td>
+                      {hasMoney && (
+                        <td className="py-3 px-2 font-mono text-right text-sm">{formatTaka(h.amount)}</td>
+                      )}
+                      {hasLand && (
+                        <td className="py-3 px-2 font-mono text-right text-sm text-teal-deep font-semibold">
+                          {formatLand(landShare, landUnit)}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
                 <tr className="border-t-2 border-teal font-semibold">
-                  <td colSpan={3} className="py-3 px-3">Total Distributed</td>
-                  <td className="py-3 px-3 font-mono text-right">{formatTaka(result.totalDistributed)}</td>
+                  <td colSpan={3} className="py-3 px-2">Total</td>
+                  {hasMoney && (
+                    <td className="py-3 px-2 font-mono text-right">{formatTaka(result.totalDistributed)}</td>
+                  )}
+                  {hasLand && (
+                    <td className="py-3 px-2 font-mono text-right text-teal-deep">
+                      {input.landArea} {unitLabel}
+                    </td>
+                  )}
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Land detail breakdown */}
+        {hasLand && (
+          <div className="card mb-8">
+            <h3 className="font-serif font-bold text-teal-deep mb-4">Land Share Details</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-cream-deep text-xs font-mono uppercase tracking-wide text-ink-soft">
+                    <th className="text-left py-2 px-4">Heir</th>
+                    <th className="text-left py-2 px-4">Fraction</th>
+                    <th className="text-right py-2 px-4">Decimal</th>
+                    <th className="text-right py-2 px-4">Katha</th>
+                    <th className="text-right py-2 px-4">Bigha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.heirs.map((h, i) => {
+                    const landShare = getLandShare(h);
+                    const conv = getLandConversions(landShare, landUnit);
+                    return (
+                      <tr key={i} className={`border-t border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-cream'}`}>
+                        <td className="py-3 px-4 font-medium">{h.name}</td>
+                        <td className="py-3 px-4 font-mono text-teal-deep">{h.fractionDisplay}</td>
+                        <td className="py-3 px-4 font-mono text-right">{conv.decimal} Dec</td>
+                        <td className="py-3 px-4 font-mono text-right">{conv.katha} Katha</td>
+                        <td className="py-3 px-4 font-mono text-right">{conv.bigha} Bigha</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-wrap gap-3 mb-6">
@@ -166,7 +289,7 @@ export default function ResultsPage() {
         {!isLoggedIn() && (
           <p className="text-sm text-ink-soft mb-4">
             <Link href="/login" className="text-teal font-medium">Login</Link> or{' '}
-            <Link href="/register" className="text-teal font-medium">register</Link> to save your calculation and download reports.
+            <Link href="/register" className="text-teal font-medium">register</Link> to save your calculation.
           </p>
         )}
 
