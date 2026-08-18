@@ -3,14 +3,16 @@
 // Login form - email + password, saves JWT to localStorage on success
 // Tested: valid credentials redirect to dashboard, invalid show error ✓
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '../../lib/api';
 import { saveAuth } from '../../lib/auth';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/dashboard';
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +23,7 @@ export default function LoginPage() {
     try {
       const data = await authAPI.login(form);
       saveAuth(data.token, data.user);
-      router.push('/dashboard');
+      router.push(redirect);
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally { setLoading(false); }
@@ -74,5 +76,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-teal border-t-transparent rounded-full" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

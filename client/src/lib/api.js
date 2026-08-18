@@ -97,6 +97,16 @@ export const adminAPI = {
     request(`/api/articles/${id}`, { method: 'DELETE' }),
 };
 
+// Registration API
+export const registrationAPI = {
+  verifyDocument: (body) => request('/api/registration/verify-document', { method: 'POST', body: JSON.stringify(body) }),
+  verifyHeirs: (body) => request('/api/registration/verify-heirs', { method: 'POST', body: JSON.stringify(body) }),
+  create: (body) => request('/api/registration', { method: 'POST', body: JSON.stringify(body) }),
+  getAll: () => request('/api/registration'),
+  getOne: (id) => request(`/api/registration/${id}`),
+  getDocumentList: (docType) => request(`/api/registration/documents/list${docType ? '?docType=' + docType : ''}`),
+};
+
 // PDF download
 export const downloadPDF = async (input, label = '') => {
   const token = getToken();

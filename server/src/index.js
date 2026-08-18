@@ -15,6 +15,7 @@ const professionalsRoutes = require('./routes/professionals');
 const articlesRoutes = require('./routes/articles');
 const adminRoutes = require('./routes/admin');
 const pdfRoutes = require('./routes/pdf');
+const registrationRoutes = require('./routes/registration');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,6 +45,7 @@ app.use('/api/professionals', professionalsRoutes);
 app.use('/api/articles', articlesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pdf', pdfRoutes);
+app.use('/api/registration', registrationRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

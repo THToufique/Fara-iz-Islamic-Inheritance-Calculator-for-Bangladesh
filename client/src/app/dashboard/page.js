@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { calculationsAPI } from '../../lib/api';
+import { calculationsAPI, registrationAPI } from '../../lib/api';
 import { isLoggedIn, getStoredUser } from '../../lib/auth';
 
 function formatTaka(n) {
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [calculations, setCalculations] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [user, setUser] = useState(null);
@@ -44,7 +45,16 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
+    const fetchRegistrations = async () => {
+      try {
+        const data = await registrationAPI.getAll();
+        setRegistrations(data.registrations || []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
     fetchCalcs();
+    fetchRegistrations();
   }, [mounted, router]);
 
   const handleDelete = async (id) => {
@@ -148,6 +158,70 @@ export default function DashboardPage() {
             </table>
           </div>
         )}
+
+        {/* Land Registrations */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-serif font-bold text-teal-deep">Land Registrations</h2>
+            <Link href="/register-land" className="btn-gold text-sm py-2 px-4">+ New Registration</Link>
+          </div>
+
+          {registrations.length === 0 ? (
+            <div className="card text-center py-10">
+              <p className="text-4xl mb-4">📋</p>
+              <h3 className="font-serif font-bold text-teal-deep text-lg mb-2">No land registrations yet</h3>
+              <p className="text-ink-soft text-sm mb-4">Run a calculation, then start the land registration process.</p>
+              <Link href="/calculator" className="btn-primary text-sm">Calculate Shares First</Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-cream-deep text-xs font-mono uppercase tracking-wide text-ink-soft">
+                    <th className="text-left py-3 px-4">Date</th>
+                    <th className="text-left py-3 px-4">Status</th>
+                    <th className="text-left py-3 px-4">Heirs</th>
+                    <th className="text-left py-3 px-4">Documents</th>
+                    <th className="text-left py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrations.map((reg, i) => (
+                    <tr key={reg._id} className={`border-t border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-cream'}`}>
+                      <td className="py-3 px-4 text-ink-soft">
+                        {new Date(reg.createdAt).toLocaleDateString('en-BD', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`badge ${
+                          reg.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          reg.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                          reg.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          reg.status === 'under_review' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {reg.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">{reg.heirs?.length || 0}</td>
+                      <td className="py-3 px-4 text-xs">
+                        {reg.propertyDocuments?.dolilVerified ? '✓' : '✗'} Dolil
+                        {' · '}
+                        {reg.propertyDocuments?.khatianVerified ? '✓' : '✗'} Khatian
+                        {' · '}
+                        {reg.propertyDocuments?.khajanaVerified ? '✓' : '✗'} Khajana
+                      </td>
+                      <td className="py-3 px-4">
+                        <Link href="/register-land" className="text-teal text-xs font-semibold hover:text-teal-deep">
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -293,6 +293,28 @@ export default function ResultsPage() {
           </p>
         )}
 
+        {/* Start Land Registration */}
+        <div className="bg-teal bg-opacity-5 border border-teal border-opacity-20 rounded-lg p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="font-serif font-bold text-teal-deep mb-1">
+                জমি রেজিস্ট্রার — Start Land Registration
+              </h3>
+              <p className="text-sm text-ink-soft">
+                Ready to register the inherited land? Start the registration process to verify
+                heir identities (NID), submit property documents (দলিল, খতিয়ান, খাজনা), and
+                complete the submission at the Sub-Registrar office.
+              </p>
+            </div>
+            <Link
+              href={isLoggedIn() ? '/register-land' : '/login?redirect=/register-land'}
+              className="btn-gold whitespace-nowrap text-center"
+            >
+              {isLoggedIn() ? 'জমি রেজিস্ট্রার শুরু করুন →' : 'Login to Register Land →'}
+            </Link>
+          </div>
+        </div>
+
         {/* Notes */}
         {result.notes?.length > 0 && (
           <div className="bg-sage rounded-lg p-5">
