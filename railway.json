@@ -5,7 +5,7 @@
     "buildContext": "./server"
   },
   "deploy": {
-    "startCommand": "node src/index.js",
+    "startCommand": "node server/src/index.js",
     "numReplicas": 1
   }
 }

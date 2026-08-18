@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_18"]
 cmds = ["cd server && npm install"]
 
 [phases.build]
-cmds = ["cd server && npm prune --production"]
+cmds = []
 
 [start]
-cmd = "cd server && node src/index.js"
+cmd = "node server/src/index.js"
