@@ -23,7 +23,9 @@ function LoginForm() {
     try {
       const data = await authAPI.login(form);
       saveAuth(data.token, data.user);
-      router.push(redirect);
+      // Redirect admins to the admin panel unless a specific redirect was requested
+      const defaultRedirect = data.user?.role === 'admin' ? '/admin' : '/dashboard';
+      router.push(redirect === '/dashboard' ? defaultRedirect : redirect);
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally { setLoading(false); }
