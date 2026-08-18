@@ -130,10 +130,11 @@ export default function RegisterLandPage() {
       const data = await registrationAPI.verifyDocument({
         docType: 'nid',
         docNumber: heir.nidNumber.trim(),
+        expectedName: heir.name,
       });
       setNidVerifications((prev) => ({
         ...prev,
-        [index]: { verified: data.verified, document: data.document || null },
+        [index]: { verified: data.verified, nameMatch: data.nameMatch, document: data.document || null },
       }));
     } catch (err) {
       setNidVerifications((prev) => ({
@@ -291,20 +292,30 @@ export default function RegisterLandPage() {
                     </div>
                     {nidVerifications[i] && (
                       <div className={`mt-2 text-sm px-3 py-2 rounded ${
-                        nidVerifications[i].verified
+                        nidVerifications[i].verified && nidVerifications[i].nameMatch !== false
                           ? 'bg-green-50 text-green-700 border border-green-200'
+                          : nidVerifications[i].verified && nidVerifications[i].nameMatch === false
+                          ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                           : 'bg-red-50 text-red-700 border border-red-200'
                       }`}>
                         {nidVerifications[i].verified ? (
-                          <span>
-                            ✓ Verified — {nidVerifications[i].document?.holderName}
-                            {nidVerifications[i].document?.holderNameBn && (
-                              <span className="ml-1">({nidVerifications[i].document.holderNameBn})</span>
+                          <div>
+                            <p>
+                              ✓ Verified — {nidVerifications[i].document?.holderName}
+                              {nidVerifications[i].document?.holderNameBn && (
+                                <span className="ml-1">({nidVerifications[i].document.holderNameBn})</span>
+                              )}
+                              {nidVerifications[i].document?.fatherName && (
+                                <span className="text-green-600 ml-1">S/O {nidVerifications[i].document.fatherName}</span>
+                              )}
+                            </p>
+                            {nidVerifications[i].nameMatch === false && (
+                              <p className="mt-1 text-xs text-yellow-700">
+                                NID belongs to "{nidVerifications[i].document?.holderName}" —
+                                please ensure this NID matches the actual person behind "{heir.name}".
+                              </p>
                             )}
-                            {nidVerifications[i].document?.fatherName && (
-                              <span className="text-green-600 ml-1">S/O {nidVerifications[i].document.fatherName}</span>
-                            )}
-                          </span>
+                          </div>
                         ) : (
                           <span>✗ {nidVerifications[i].error || 'NID not found in database'}</span>
                         )}
@@ -627,8 +638,8 @@ export default function RegisterLandPage() {
                   {registration.heirs.map((h, i) => (
                     <div key={i} className="flex items-center justify-between text-sm py-1">
                       <span>{h.name} — NID: {h.nidNumber}</span>
-                      <span className={h.nidVerified ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
-                        {h.nidVerified ? '✓ Verified' : '✗ Not Verified'}
+                      <span className={h.nidVerified && h.nameMatch !== false ? 'text-green-600 font-semibold' : h.nidVerified ? 'text-yellow-600 font-semibold' : 'text-red-600 font-semibold'}>
+                        {h.nidVerified && h.nameMatch !== false ? '✓ Verified' : h.nidVerified ? '✓ Verified (name mismatch)' : '✗ Not Verified'}
                       </span>
                     </div>
                   ))}

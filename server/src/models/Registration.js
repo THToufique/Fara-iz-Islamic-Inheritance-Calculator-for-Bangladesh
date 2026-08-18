@@ -5,6 +5,7 @@ const heirRegistrationSchema = new mongoose.Schema({
   role: { type: String, required: true },
   nidNumber: { type: String, required: true },
   nidVerified: { type: Boolean, default: false },
+  nameMatch: { type: Boolean, default: false },
   shareFraction: { type: String, default: '' },
   sharePercent: { type: String, default: '' },
   shareAmount: { type: Number, default: 0 },

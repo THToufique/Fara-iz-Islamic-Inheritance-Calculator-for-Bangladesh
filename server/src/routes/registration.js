@@ -33,9 +33,19 @@ router.post('/verify-document', protect, [
       });
     }
 
+    // Check if the NID holder name matches the expected heir name
+    // Skip name matching for role-based names like "Wife 1", "Son 2", "Father", etc.
+    const expectedName = req.body.expectedName;
+    const isRoleName = expectedName && /^(wife|husband|son|daughter|father|mother|parent|spouse|child)\s*\d*$/i.test(expectedName.trim());
+    const nameMatch = expectedName && !isRoleName
+      ? doc.holderName.toLowerCase().includes(expectedName.toLowerCase()) ||
+        expectedName.toLowerCase().includes(doc.holderName.toLowerCase())
+      : null;
+
     res.json({
       success: true,
       verified: true,
+      nameMatch,
       document: {
         docNumber: doc.docNumber,
         docType: doc.docType,
@@ -132,9 +142,14 @@ router.post('/', protect, [
         docNumber: heir.nidNumber.trim(),
         isActive: true,
       });
+      const nameMatch = doc
+        ? doc.holderName.toLowerCase().includes(heir.name.toLowerCase()) ||
+          heir.name.toLowerCase().includes(doc.holderName.toLowerCase())
+        : false;
       verifiedHeirs.push({
         ...heir,
         nidVerified: !!doc,
+        nameMatch,
       });
     }
 
